@@ -5,6 +5,7 @@ const Pet = require('../models/pet');
 const verifyToken = require('../middlewares/verifyToken');
 const multer = require('multer');
 const path = require('path');
+const User = require('../models/user');
 
 // Multer storage configuration
 const storage = multer.diskStorage({
@@ -21,13 +22,35 @@ const upload = multer({ storage: storage });
 // Get user's pets
 router.get('/my', verifyToken, async (req, res) => {
   try {
-    console.log('User ID:', req.user.id);
+    console.log('User ID from token:', req.user.id);
+    console.log('User object from token:', req.user);
+    
+    // Önce kullanıcının var olup olmadığını kontrol et
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      console.log('User not found in database');
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    console.log('Found user:', user);
+    
+    // Kullanıcının ilanlarını bul
     const pets = await Pet.find({ owner: req.user.id });
     console.log('Found pets:', pets);
+    console.log('Number of pets found:', pets.length);
+    
+    if (pets.length === 0) {
+      console.log('No pets found for user:', req.user.id);
+    }
+    
     res.json(pets);
   } catch (err) {
-    console.error('Error fetching user pets:', err);
-    res.status(500).json({ message: 'Error fetching user pets' });
+    console.error('Error in /my route:', err);
+    console.error('Error stack:', err.stack);
+    res.status(500).json({ 
+      message: 'Error fetching user pets',
+      error: err.message 
+    });
   }
 });
 
